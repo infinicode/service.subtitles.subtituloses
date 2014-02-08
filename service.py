@@ -1,5 +1,13 @@
 # -*- coding: utf-8 -*- 
 
+"""
+This addon is a modification of quillo86's addon for XBMC Frodo, adapted to Gotham using
+manacker's service.subtitles.subscene as base code
+
+Original code by quillo86 (https://github.com/quillo86) and manacker (https://github.com/manacker)
+Adaptation by infinito (https://github.com/infinicode)
+"""
+
 import os
 import sys
 import xbmc
@@ -8,8 +16,10 @@ import xbmcvfs
 import xbmcaddon
 import xbmcgui
 import xbmcplugin
+import re
 import shutil
 import unicodedata
+import urllib2
 
 __addon__ = xbmcaddon.Addon()
 __author__     = __addon__.getAddonInfo('author')
@@ -27,9 +37,9 @@ sys.path.append (__resource__)
 
 from SubEsUtilities import search_tvshow, log
 
-import urllib2
-import re
 
+
+""" Called when searching for subtitles from XBMC """
 def Search(item):
 	subs = search_tvshow(item['tvshow'], item['season'], item['episode'], item['2let_language'], item['file_original_path'])
 	for sub in subs:
@@ -48,7 +58,7 @@ def append_subtitle(item):
     ## add it to list, this can be done as many times as needed for all subtitles found
     xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=url, listitem=listitem, isFolder=False)
 
-  
+""" Called when subtitle download request from XBMC """
 def Download(link, filename):
     subtitle_list = []
     exts = [".srt", ".sub", ".txt", ".smi", ".ssa", ".ass"]
@@ -62,9 +72,6 @@ def Download(link, filename):
         typeid = "zip"
         filmid = 0
 
-        #postparams = urllib.urlencode(
-        #    {'__EVENTTARGET': 's$lc$bcr$downloadLink', '__EVENTARGUMENT': '', '__VIEWSTATE': viewstate,
-        #     '__PREVIOUSPAGE': previouspage, 'subtitleId': subtitleid, 'typeId': typeid, 'filmId': filmid})
         postparams = None
 
         class MyOpener(urllib.FancyURLopener):
@@ -72,10 +79,11 @@ def Download(link, filename):
 
         my_urlopener = MyOpener()
         my_urlopener.addheader('Referer', link)
+        
         log(__name__, "Fetching subtitles using url '%s' with referer header '%s' and post parameters '%s'" % (link, link, postparams))
         response = my_urlopener.open(link, postparams)
-        local_tmp_file = os.path.join(__temp__, "sub.xxx")
-        packed = False
+        local_tmp_file = os.path.join(__temp__, "sub.srt")
+        
         if xbmcvfs.exists(__temp__):
             shutil.rmtree(__temp__)
         xbmcvfs.mkdirs(__temp__)
@@ -84,47 +92,16 @@ def Download(link, filename):
             local_file_handle = open(local_tmp_file, "wb")
             local_file_handle.write(response.read())
             local_file_handle.close()
-
-            #Check archive type (rar/zip/else) through the file header (rar=Rar!, zip=PK)
-            myfile = open(local_tmp_file, "rb")
-            myfile.seek(0)
-            if myfile.read(1) == 'R':
-                typeid = "rar"
-                packed = True
-                log(__name__, "Discovered RAR Archive")
-            else:
-                myfile.seek(0)
-                if myfile.read(1) == 'P':
-                    typeid = "zip"
-                    packed = True
-                    log(__name__, "Discovered ZIP Archive")
-                else:
-                    typeid = "srt"
-                    packed = False
-                    log(__name__, "Discovered a non-archive file")
-            myfile.close()
-            local_tmp_file = os.path.join(__temp__, "sub." + typeid)
-            os.rename(os.path.join(__temp__, "sub.xxx"), local_tmp_file)
-            log(__name__, "Saving to %s" % local_tmp_file)
             
             subtitle_list.append(local_tmp_file)
             log(__name__, "=== returning subtitle file %s" % file)
+
         except:
             log(__name__, "Failed to save subtitle to %s" % local_tmp_file)
 
-# We don't support zip files yet
-#        if packed:
-#            xbmc.sleep(200)
-#            xbmc.executebuiltin(('XBMC.Extract("%s","%s")' % (local_tmp_file, __temp__,)).encode('utf-8'), True)
-#
-#        for file in xbmcvfs.listdir(local_tmp_file)[1]:
-#            file = os.path.join(__temp__, file)
-#            if (os.path.splitext( file )[1] in exts):
-#                log(__name__, "=== returning subtitle file %s" % file)
-#                subtitle_list.append(file)
-
     return subtitle_list
- 
+
+""" Get parameters from XBMC and launch actions """
 def normalizeString(str):
   return unicodedata.normalize(
          'NFKD', unicode(unicode(str, 'utf-8'))

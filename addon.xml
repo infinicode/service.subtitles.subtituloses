@@ -9,7 +9,14 @@
   <extension point="xbmc.subtitle.module"
              library="service.py" />
   <extension point="xbmc.addon.metadata">
-    <summary lang="en">Subtitulos.es Subtitle Service</summary>
-    <description lang="en">Subtitulos.es Subtitle Service</description>
+    <summary lang="en">Subtitulos.es</summary>
+    <description lang="en">Search and download subtitles from Subtitulos.es</description>
+    <disclaimer lang="en"></disclaimer>
+    <platform>all</platform>
+    <license>GNU GENERAL PUBLIC LICENSE. Version 2, June 1991</license>
+    <forum></forum>
+    <website></website>
+    <email></email>
+    <source>https://github.com/infinicode/service.subtitles.subtituloses</source> 
   </extension>
 </addon>

@@ -9,22 +9,16 @@
 import xbmc
 import re
 import urllib
+from operator import itemgetter
 
 main_url = "http://www.subtitulos.es/"
 subtitle_pattern1 = "<div id=\"version\" class=\"ssdiv\">(.+?)Versi&oacute;n(.+?)<span class=\"right traduccion\">(.+?)</div>(.+?)</div>"
 subtitle_pattern2 = "<li class='li-idioma'>(.+?)<strong>(.+?)</strong>(.+?)<li class='li-estado (.+?)</li>(.+?)<span class='descargar (.+?)</span>"
 
-log_file = "/tmp/subs.log"
-
 def log(module, msg):
-	#xbmc.log((u"### [%s] - %s" % (module, msg)).encode('utf-8'), level=xbmc.LOGDEBUG)
-	#f = open(log_file, 'a')
-	#f.write(msg + "\n") # python will convert \n to os.linesep
-	#f.close()
-	pass
+	xbmc.log((u"### [%s] - %s" % (module,msg,)).encode('utf-8'), level=xbmc.LOGDEBUG)
 
 def search_tvshow(tvshow, season, episode, languages, filename):
-
 	subs = list()
 	for level in range(4):
 		searchstring, tvshow, season, episode = getsearchstring(tvshow, season, episode, level)
@@ -32,9 +26,7 @@ def search_tvshow(tvshow, season, episode, languages, filename):
 		subs.extend(getallsubsforurl(url, languages, None, tvshow, season, episode))
 		
 	subs = clean_subtitles_list(subs)
-	for s in subs:
-		log("lib", s['filename'] + ' == ' + s['link'])
-		print s
+	subs = order_subtitles_list(subs)
 	return subs
 		
 def getsearchstring(tvshow, season, episode, level):
@@ -87,31 +79,42 @@ def getallsubsforurl(url, lang, file_original_path, tvshow, season, episode):
 			    idioma = re.sub(r'\xc3\xa0', 'a', idioma)
 			    idioma = re.sub(r'\xc3\xa9', 'e', idioma)
 
-			    if idioma == "English":
+			    if idioma == "Espanol (Espana)":
+			            languageshort = "es"
+			            languagelong = "Spanish"
+			            filename = filename + ".(ESPAÑA)"
+			            server = filename
+			            order = 1
+			    elif idioma == "English":
 			            languageshort = "en"
 			            languagelong = "English"
 			            filename = filename + ".(ENGLISH)"
 			            server = filename
+			            order = 2
 			    elif idioma == "Catala":
 			            languageshort = "ca"
 			            languagelong = "Catalan"
 			            filename = filename + ".(CATALA)"
 			            server = filename
+			            order = 2
 			    elif idioma == "Espanol (Latinoamerica)":
 			            languageshort = "es"
 			            languagelong = "Spanish"
 			            filename = filename + ".(LATINO)"
 			            server = filename
+			            order = 2
 			    elif idioma == "Galego":
 			            languageshort = "es"
 			            languagelong = "Spanish"
 			            filename = filename + ".(GALEGO)"
 			            server = filename
+			            order = 5
 			    else:
 			            languageshort = "es"
 			            languagelong = "Spanish"
 			            filename = filename + ".(ESPAÑA)"
 			            server = filename
+			            order = 1
 
 			    estado = matches.group(4)
 			    estado = re.sub(r'\t', '', estado)
@@ -124,7 +127,7 @@ def getallsubsforurl(url, lang, file_original_path, tvshow, season, episode):
 			    id = re.sub(r'http://www.subtitulos.es/', '', id)
 
 			    if estado.strip() == "green'>Completado".strip() and languageshort in lang:
-			            subtitles_list.append({'rating': "0", 'no_files': 1, 'filename': filename, 'server': server, 'sync': False, 'id' : id, 'language_flag': languageshort + '.gif', 'language_name': languagelong, 'hearing_imp': False, 'link': main_url + id, 'lang': languageshort})
+			            subtitles_list.append({'rating': "0", 'no_files': 1, 'filename': filename, 'server': server, 'sync': False, 'id' : id, 'language_flag': languageshort + '.gif', 'language_name': languagelong, 'hearing_imp': False, 'link': main_url + id, 'lang': languageshort, 'order': order})
 			    
 			    filename = backup
 			    server = backup
@@ -150,23 +153,7 @@ def geturl(url):
                 #log( __name__ ,"%s Failed to get url:%s" % (debug_pretext, url))
                 content    = None
         return content
-"""
 
-def geturl(url):
-    log(__name__, "Getting url: %s" % url)
-    try:
-        response = urllib2.urlopen(url)
-        content = response.read()
-        #Fix non-unicode characters in movie titles
-        strip_unicode = re.compile("([^-_a-zA-Z0-9!@#%&=,/'\";:~`\$\^\*\(\)\+\[\]\.\{\}\|\?<>\\]+|[^\s]+)")
-        content = strip_unicode.sub('', content)
-        return_url = response.geturl()
-    except:
-        log(__name__, "Failed to get url: %s" % url)
-        content = None
-        return_url = None
-    return content, return_url
-"""
 def clean_subtitles_list(subtitles_list):
     seen = set()
     subs = []
@@ -178,7 +165,12 @@ def clean_subtitles_list(subtitles_list):
             seen.add(filename)
     return subs
 
-if __name__ == "__main__":
-	search_tvshow("episodes", "3", "5", "es,en", None)
+def order_subtitles_list(subtitles_list):
+	return sorted(subtitles_list, key=itemgetter('order')) 
 	
-
+"""
+if __name__ == "__main__":
+	subs = search_tvshow("episodes", "3", "5", "es,en", None)
+	for sub in subs:
+		print sub
+"""
