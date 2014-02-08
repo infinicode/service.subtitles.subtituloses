@@ -10,6 +10,7 @@ import xbmc
 import re
 import urllib
 from operator import itemgetter
+from utils import languages
 
 main_url = "http://www.subtitulos.es/"
 subtitle_pattern1 = "<div id=\"version\" class=\"ssdiv\">(.+?)Versi&oacute;n(.+?)<span class=\"right traduccion\">(.+?)</div>(.+?)</div>"
@@ -21,9 +22,9 @@ def log(module, msg):
 def search_tvshow(tvshow, season, episode, languages, filename):
 	subs = list()
 	for level in range(4):
-		searchstring, tvshow, season, episode = getsearchstring(tvshow, season, episode, level)
+		searchstring, ttvshow, sseason, eepisode = getsearchstring(tvshow, season, episode, level)
 		url = main_url + searchstring.lower()
-		subs.extend(getallsubsforurl(url, languages, None, tvshow, season, episode))
+		subs.extend(getallsubsforurl(url, languages, None, ttvshow, sseason, eepisode, level))
 		
 	subs = clean_subtitles_list(subs)
 	subs = order_subtitles_list(subs)
@@ -56,13 +57,14 @@ def getsearchstring(tvshow, season, episode, level):
 	#log( __name__ ,"%s Search string = %s" % (debug_pretext, searchstring))
 	return searchstring, tvshow, season, episode
 
-def getallsubsforurl(url, lang, file_original_path, tvshow, season, episode):
+def getallsubsforurl(url, langs, file_original_path, tvshow, season, episode, level):
 
 	subtitles_list = []
 
 	content = geturl(url)
 
 	for matches in re.finditer(subtitle_pattern1, content, re.IGNORECASE | re.DOTALL | re.MULTILINE | re.UNICODE):
+		
 		filename = urllib.unquote_plus(matches.group(2))
 		filename = re.sub(r' ', '.', filename)
 		filename = re.sub(r'\s', '.', tvshow) + "." + season + "x" + episode + filename
@@ -72,87 +74,64 @@ def getallsubsforurl(url, lang, file_original_path, tvshow, season, episode):
 		subs = matches.group(4)
 
 		for matches in re.finditer(subtitle_pattern2, subs, re.IGNORECASE | re.DOTALL | re.MULTILINE | re.UNICODE):
-			    #log( __name__ ,"Descargas: %s" % (matches.group(2)))
+			#log( __name__ ,"Descargas: %s" % (matches.group(2)))
 
-			    idioma = matches.group(2)
-			    idioma = re.sub(r'\xc3\xb1', 'n', idioma)
-			    idioma = re.sub(r'\xc3\xa0', 'a', idioma)
-			    idioma = re.sub(r'\xc3\xa9', 'e', idioma)
+			lang = matches.group(2)
+			lang = re.sub(r'\xc3\xb1', 'n', lang)
+			lang = re.sub(r'\xc3\xa0', 'a', lang)
+			lang = re.sub(r'\xc3\xa9', 'e', lang)
 
-			    if idioma == "Espanol (Espana)":
-			            languageshort = "es"
-			            languagelong = "Spanish"
-			            filename = filename + ".(ESPAÑA)"
-			            server = filename
-			            order = 1
-			    elif idioma == "English":
-			            languageshort = "en"
-			            languagelong = "English"
-			            filename = filename + ".(ENGLISH)"
-			            server = filename
-			            order = 2
-			    elif idioma == "Catala":
-			            languageshort = "ca"
-			            languagelong = "Catalan"
-			            filename = filename + ".(CATALA)"
-			            server = filename
-			            order = 2
-			    elif idioma == "Espanol (Latinoamerica)":
-			            languageshort = "es"
-			            languagelong = "Spanish"
-			            filename = filename + ".(LATINO)"
-			            server = filename
-			            order = 2
-			    elif idioma == "Galego":
-			            languageshort = "es"
-			            languagelong = "Spanish"
-			            filename = filename + ".(GALEGO)"
-			            server = filename
-			            order = 5
-			    else:
-			            languageshort = "es"
-			            languagelong = "Spanish"
-			            filename = filename + ".(ESPAÑA)"
-			            server = filename
-			            order = 1
+			if lang in languages:
+				languageshort = languages[lang][0]
+				languagelong = lang
+				filename = filename + ".(%s)" % languages[lang][1]
+				server = filename
+				order = 1 + languages[lang][2]
+			else:
+				lang = "Unknown"
+				languageshort = languages[lang][0]
+				languagelong = lang
+				filename = filename + ".(%s)" % languages[lang][1]
+				server = filename
+				order = 1 + languages[lang][2]
 
-			    estado = matches.group(4)
-			    estado = re.sub(r'\t', '', estado)
-			    estado = re.sub(r'\n', '', estado)
+			estado = matches.group(4)
+			estado = re.sub(r'\t', '', estado)
+			estado = re.sub(r'\n', '', estado)
 
-			    id = matches.group(6)
-			    id = re.sub(r'([^-]*)href="', '', id)
-			    id = re.sub(r'" rel([^-]*)', '', id)
-			    id = re.sub(r'" re([^-]*)', '', id)
-			    id = re.sub(r'http://www.subtitulos.es/', '', id)
+			id = matches.group(6)
+			id = re.sub(r'([^-]*)href="', '', id)
+			id = re.sub(r'" rel([^-]*)', '', id)
+			id = re.sub(r'" re([^-]*)', '', id)
+			id = re.sub(r'http://www.subtitulos.es/', '', id)
 
-			    if estado.strip() == "green'>Completado".strip() and languageshort in lang:
-			            subtitles_list.append({'rating': "0", 'no_files': 1, 'filename': filename, 'server': server, 'sync': False, 'id' : id, 'language_flag': languageshort + '.gif', 'language_name': languagelong, 'hearing_imp': False, 'link': main_url + id, 'lang': languageshort, 'order': order})
-			    
-			    filename = backup
-			    server = backup
+			if estado.strip() == "green'>Completado".strip() and languageshort in langs:
+				subtitles_list.append({'rating': "0", 'no_files': 1, 'filename': filename, 'server': server, 'sync': False, 'id' : id, 'language_flag': languageshort + '.gif', 'language_name': languagelong, 'hearing_imp': False, 'link': main_url + id, 'lang': languageshort, 'order': order})
+
+			filename = backup
+			server = backup
 			    
 	return subtitles_list
 
 
 def geturl(url):
-        class AppURLopener(urllib.FancyURLopener):
-                version = "App/1.7"
-                def __init__(self, *args):
-                        urllib.FancyURLopener.__init__(self, *args)
-                def add_referrer(self, url=None):
-                        if url:
-                                urllib._urlopener.addheader('Referer', url)
+	class AppURLopener(urllib.FancyURLopener):
+		version = "App/1.7"
+		def __init__(self, *args):
+			urllib.FancyURLopener.__init__(self, *args)
+		def add_referrer(self, url=None):
+			if url:
+				urllib._urlopener.addheader('Referer', url)
 
-        urllib._urlopener = AppURLopener()
-        urllib._urlopener.add_referrer("http://www.subtitulos.es/")
-        try:
-                response = urllib._urlopener.open(url)
-                content    = response.read()
-        except:
-                #log( __name__ ,"%s Failed to get url:%s" % (debug_pretext, url))
-                content    = None
-        return content
+	urllib._urlopener = AppURLopener()
+	urllib._urlopener.add_referrer("http://www.subtitulos.es/")
+	try:
+		response = urllib._urlopener.open(url)
+		content    = response.read()
+	except:
+		#log( __name__ ,"%s Failed to get url:%s" % (debug_pretext, url))
+		content    = None
+	return content
 
 def clean_subtitles_list(subtitles_list):
     seen = set()
@@ -170,7 +149,7 @@ def order_subtitles_list(subtitles_list):
 	
 """
 if __name__ == "__main__":
-	subs = search_tvshow("episodes", "3", "5", "es,en", None)
-	for sub in subs:
-		print sub
+	subs = search_tvshow("les revenants", "1", "1", "es,en,fr", None)
+	for sub in subs: print sub['server'], sub['link']
 """
+
