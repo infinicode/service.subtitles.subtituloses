@@ -82,18 +82,18 @@ def getallsubsforurl(url, langs, file_original_path, tvshow, season, episode, le
 			lang = re.sub(r'\xc3\xa9', 'e', lang)
 
 			if lang in languages:
-				languageshort = languages[lang][0]
-				languagelong = lang
-				filename = filename + ".(%s)" % languages[lang][1]
+				languageshort = languages[lang][1]
+				languagelong = languages[lang][0]
+				filename = filename + ".(%s)" % languages[lang][2]
 				server = filename
-				order = 1 + languages[lang][2]
+				order = 1 + languages[lang][3]
 			else:
 				lang = "Unknown"
-				languageshort = languages[lang][0]
-				languagelong = lang
-				filename = filename + ".(%s)" % languages[lang][1]
+				languageshort = languages[lang][1]
+				languagelong = languages[lang][0]
+				filename = filename + ".(%s)" % languages[lang][2]
 				server = filename
-				order = 1 + languages[lang][2]
+				order = 1 + languages[lang][3]
 
 			estado = matches.group(4)
 			estado = re.sub(r'\t', '', estado)
