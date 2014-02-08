@@ -66,19 +66,14 @@ def Download(link, filename):
     if link:
         downloadlink = link
         log(__name__, "Downloadlink %s" % link)
-        viewstate = 0
-        previouspage = 0
-        subtitleid = 0
-        typeid = "zip"
-        filmid = 0
-
-        postparams = None
 
         class MyOpener(urllib.FancyURLopener):
             version = "User-Agent=Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US; rv:1.9.2.3) Gecko/20100401 Firefox/3.6.3 ( .NET CLR 3.5.30729)"
 
         my_urlopener = MyOpener()
         my_urlopener.addheader('Referer', link)
+        postparams = None
+        
         
         log(__name__, "Fetching subtitles using url '%s' with referer header '%s' and post parameters '%s'" % (link, link, postparams))
         response = my_urlopener.open(link, postparams)
